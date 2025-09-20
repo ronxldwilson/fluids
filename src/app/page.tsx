@@ -1,3 +1,4 @@
+"use client";
 import FluidCanvas from "@/components/ThreeBody";
 
 export default function Home() {
