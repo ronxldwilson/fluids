@@ -22,12 +22,13 @@ const ThreeBody: React.FC = () => {
         }
 
         applyForce(force: p5.Vector, speedFactor: number) {
-          let acc = p5.Vector.div(force, this.mass);
-          this.vel.add(acc.mult(speedFactor));
+          let acc = force.copy().div(this.mass); // ensure it's a p5.Vector
+          acc.mult(speedFactor);
+          this.vel.add(acc);
         }
 
         update(speedFactor: number) {
-          this.pos.add(p5.Vector.mult(this.vel, speedFactor));
+          this.pos.add(this.vel.copy().mult(speedFactor));
         }
 
         show() {
@@ -54,7 +55,9 @@ const ThreeBody: React.FC = () => {
       };
 
       s.setup = () => {
-        s.createCanvas(window.innerWidth, window.innerHeight).parent(canvasRef.current!);
+        if (typeof window !== "undefined") {
+          s.createCanvas(window.innerWidth, window.innerHeight).parent(canvasRef.current!);
+        }
 
         initBodies();
 
@@ -76,7 +79,7 @@ const ThreeBody: React.FC = () => {
           .mousePressed(() => {
             initBodies();
             for (let i = 0; i < bodies.length; i++) {
-              (MassSliders[i] as any).value(bodies[i].mass);
+              (MassSliders[i] as p5.Element & { value: (val: number) => void }).value(bodies[i].mass);
             }
           });
       };
@@ -84,12 +87,12 @@ const ThreeBody: React.FC = () => {
       s.draw = () => {
         s.background(0);
 
-        let G = (GSlider as any).value();
-        let speedFactor = (SpeedSlider as any).value();
+        let G = Number((GSlider as p5.Element & { value: () => number | string }).value());
+        let speedFactor = Number((SpeedSlider as p5.Element & { value: () => number | string }).value());
 
         // Update masses from sliders
         for (let i = 0; i < bodies.length; i++) {
-          bodies[i].mass = (MassSliders[i] as any).value();
+          bodies[i].mass = Number((MassSliders[i] as p5.Element & { value: () => number | string }).value());
         }
 
         // Gravitational interactions
@@ -97,11 +100,11 @@ const ThreeBody: React.FC = () => {
           for (let j = i + 1; j < bodies.length; j++) {
             let dir = p5.Vector.sub(bodies[j].pos, bodies[i].pos);
             let distSq = s.constrain(dir.magSq(), 25, 50000);
-            let forceMag = (G * bodies[i].mass * bodies[j].mass) / distSq;
+            let forceMag = (Number(G) * Number(bodies[i].mass) * Number(bodies[j].mass)) / Number(distSq);
             let force = dir.copy().setMag(forceMag);
 
-            bodies[i].applyForce(force, speedFactor);
-            bodies[j].applyForce(force.mult(-1), speedFactor);
+            bodies[i].applyForce(force, Number(speedFactor));
+            bodies[j].applyForce(force.copy().mult(-1), Number(speedFactor));
           }
         }
 
@@ -158,14 +161,19 @@ const ThreeBody: React.FC = () => {
       };
 
       s.windowResized = () => {
-        s.resizeCanvas(window.innerWidth, window.innerHeight);
+        if (typeof window !== "undefined") {
+          s.resizeCanvas(window.innerWidth, window.innerHeight);
+        }
       };
     };
 
-    const p5Instance = new p5(sketch);
+    let p5Instance: p5 | undefined;
+    if (typeof window !== "undefined") {
+      p5Instance = new p5(sketch, canvasRef.current!);
+    }
 
     return () => {
-      p5Instance.remove();
+      p5Instance?.remove();
     };
   }, []);
 
